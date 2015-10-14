@@ -17,30 +17,23 @@
 ##############################################################################
 
 {
-    "name": "Mrp Real Costs",
+    "name": "MRP real costs",
     "version": "1.0",
     "depends": ["analytic",
                 "project_timesheet",
                 "mrp_project_link",
                 "mrp_operations_time_control",
                 "stock_account",
+                "product_variant_cost",
                 "mrp_production_project_estimated_cost"],
     "author": "OdooMRP team,"
               "AvanzOSC,"
               "Serv. Tecnol. Avanzados - Pedro M. Baeza",
     "category": "MRP",
-    "description": """
-        - This module allows to control the real cost of a production order,
-        creating lines in the analytic account defined in the order that is
-        created by the module mrp_project_link.
-
-        - Updates product standard price when a production orders final product
-        is done.
-            (Product stock * Product standard price + Production real cost) /
-            (Product stock + Final product quantity)
-        """,
-    'data': ["views/mrp_production_view.xml"],
-    'demo': [],
+    'data': [
+        "data/analytic_journal_data.xml",
+        "views/mrp_production_view.xml"
+        ],
     'installable': True,
     'auto_install': False,
 }

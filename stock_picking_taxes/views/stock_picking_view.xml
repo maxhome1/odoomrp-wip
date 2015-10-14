@@ -6,22 +6,34 @@
             <field name="model">stock.picking</field>
             <field name="inherit_id" ref="stock.view_picking_form" />
             <field name="arch" type="xml">
+                <field name="move_lines" position="after">
+                    <group class="oe_subtotal_footer oe_right"
+                           attrs="{'invisible': [('sale_id', '=', False)]}"
+                           name="subtotal_footer">
+                        <field name="sale_id" invisible="1" />
+                        <field name="currency_id" invisible="1" />
+                        <field name="amount_untaxed"
+                                widget="monetary"
+                                options="{'currency_field': 'currency_id'}"/>
+                        <field name="amount_tax"
+                                widget="monetary"
+                                options="{'currency_field': 'currency_id'}"/>
+                        <field name="amount_total"
+                                class="oe_subtotal_footer_separator"
+                                widget="monetary"
+                                options="{'currency_field': 'currency_id'}"/>
+                    </group>
+                    <div class="oe_clear"/>
+                </field>
                 <notebook position="inside">
-                    <page string="Taxes">
-                        <group col="4">
-                            <field name="amount_untaxed" />
-                            <field name="amount_total" />
-                        </group>
-                        <field name="taxes" nolabel="1" >
+                    <page string="Taxes" attrs="{'invisible': [('sale_id', '=', False)]}">
+                        <field name="taxes" nolabel="1">
                             <tree>
                                 <field name="name" />
                                 <field name="base" />
                                 <field name="amount" />
                             </tree>
                         </field>
-                        <button name="refresh_taxes"
-                            string="Refresh" type="object"
-                            icon="gtk-ok" />
                     </page>
                 </notebook>
             </field>

@@ -71,7 +71,8 @@ class PurchaseCostDistribution(models.Model):
     def _expense_lines_default(self):
         expenses = self.env['purchase.expense.type'].search(
             [('default_expense', '=', True)])
-        return [{'type': x} for x in expenses]
+        return [{'type': x, 'expense_amount': x.default_amount}
+                for x in expenses]
 
     name = fields.Char(string='Distribution number', required=True,
                        select=True, default='/')
@@ -235,7 +236,7 @@ class PurchaseCostDistribution(models.Model):
             qty_available = product.product_tmpl_id.qty_available
             product_avail = qty_available - move.product_qty
             if product_avail <= 0:
-                new_std_price = move.price_unit
+                new_std_price = new_price
             else:
                 domain_quant = [
                     ('product_id', 'in',
@@ -287,6 +288,7 @@ class PurchaseCostDistribution(models.Model):
 class PurchaseCostDistributionLine(models.Model):
     _name = "purchase.cost.distribution.line"
     _description = "Purchase cost distribution Line"
+    _rec_name = 'picking_id'
 
     @api.one
     @api.depends('product_price_unit', 'product_qty')
@@ -362,12 +364,13 @@ class PurchaseCostDistributionLine(models.Model):
         related='move_id.purchase_line_id')
     purchase_id = fields.Many2one(
         comodel_name='purchase.order', string='Purchase order', readonly=True,
-        related='purchase_line_id.order_id')
+        related='move_id.purchase_line_id.order_id', store=True)
     partner = fields.Many2one(
         comodel_name='res.partner', string='Supplier', readonly=True,
-        related='purchase_id.partner_id')
+        related='move_id.purchase_line_id.order_id.partner_id')
     picking_id = fields.Many2one(
-        'stock.picking', string='Picking', related='move_id.picking_id')
+        'stock.picking', string='Picking', related='move_id.picking_id',
+        store=True)
     product_id = fields.Many2one(
         comodel_name='product.product', string='Product', store=True,
         compute='_get_product_id')
@@ -448,6 +451,7 @@ class PurchaseCostDistributionLineExpense(models.Model):
 class PurchaseCostDistributionExpense(models.Model):
     _name = "purchase.cost.distribution.expense"
     _description = "Purchase cost distribution expense"
+    _rec_name = "type"
 
     @api.one
     @api.depends('distribution', 'distribution.cost_lines')
@@ -482,3 +486,8 @@ class PurchaseCostDistributionExpense(models.Model):
         comodel_name='account.invoice.line', string="Supplier invoice line",
         domain="[('invoice_id.type', '=', 'in_invoice'),"
                "('invoice_id.state', 'in', ('open', 'paid'))]")
+
+    @api.onchange('type')
+    def onchange_type(self):
+        if self.type and self.type.default_amount:
+            self.expense_amount = self.type.default_amount

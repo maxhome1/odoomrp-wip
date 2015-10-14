@@ -1,4 +1,3 @@
-
 # -*- encoding: utf-8 -*-
 ##############################################################################
 #
@@ -47,26 +46,48 @@ class ReassignProducts(models.TransientModel):
         lines = []
         for vals in val_list:
             line_vals = {
-                'attributes': [(6, 0, list(vals))],
+                'values': [(6, 0, list(vals))],
                 'product': self._product_by_variants(vals, products),
             }
             line_vals['old_product'] = line_vals['product']
             lines.append((0, 0, line_vals))
         return {'products': lines}
 
+    def _keep_old_values(self, template, line):
+        return {'lst_price': line.product.lst_price}
+
+    def _make_post_template_reassign(self, template, line, old_values):
+        """Overwrite list price making a trick with price extra
+        (only valid if there is one attribute)
+        """
+        if len(line.values) == 1:
+            if old_values['lst_price'] != template.lst_price:
+                line.values.price_extra = (
+                    old_values['lst_price'] - template.lst_price)
+
+    def _prepare_reassign_vals(self, line, template):
+        return {
+            'attribute_value_ids': [(6, 0, line.values.ids)],
+            'product_tmpl_id': template.id,
+            'image': line.product.image,
+        }
+
     @api.multi
     def reassign(self):
-        template_id = self.env.context['active_id']
+        template = self.env['product.template'].browse(
+            self.env.context['active_id'])
         for line in self.products:
             if line.product:
                 old_template = line.product.product_tmpl_id
-                if old_template.id == template_id:
+                if old_template == template:
                     continue
                 if line.old_product:
                     line.old_product.unlink()
-                line.product.write(
-                    {'attribute_value_ids': [(6, 0, line.attributes.ids)],
-                     'product_tmpl_id': template_id})
+                # Keep value before overwriting
+                old_values = self._keep_old_values(template, line)
+                vals = self._prepare_reassign_vals(line, template)
+                line.product.write(vals)
+                self._make_post_template_reassign(template, line, old_values)
                 if not old_template.product_variant_ids:
                     old_template.unlink()
         return True
@@ -78,9 +99,8 @@ class ReassignProductLines(models.TransientModel):
     wizard = fields.Many2one(
         comodel_name='reassign.products', string='Reassign Wizard',
         required=True)
-    attributes = fields.Many2many(
+    values = fields.Many2many(
         'product.attribute.value', string="Attributes")
-    old_product = fields.Many2one(
-        comodel_name='product.product', string='Product')
+    old_product = fields.Many2one(comodel_name='product.product')
     product = fields.Many2one(
         comodel_name='product.product', string='Product')

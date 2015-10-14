@@ -6,23 +6,28 @@
             <field name="model">mrp.production</field>
             <field name="inherit_id" ref="mrp.mrp_production_form_view" />
             <field name="arch" type="xml">
+                <field name="origin" position="after">
+                    <field name="production" invisible="1" />
+                </field>
                 <page string="Extra Information" position="after">
-                    <page string="Packaging">
+                    <page string="Packaging" attrs="{'invisible':[('production','!=',False)]}">
                         <group>
                             <group string="Pack" colspan="4" col="4">
+                                <field name="final_product_qty" />
+                                <field name="left_product_qty" />
                                 <button name="get_dump_packages"
                                     string="Get packages" type="object"
                                     colspan="2" />
                                 <field name="pack" nolabel="1"
                                     colspan="4" col="4">
                                     <tree string="Pack" editable="top"
-                                        create="0" fonts="bold:processed==False"
+                                        fonts="bold:processed==False"
                                         colors="blue:packing_state in ('draft','confirmed');gray:packing_state in ('done','cancel')" >
-                                        <field name="product"
-                                            readonly="1" />
-                                        <field name="qty" />
-                                        <field name="fill" sum="Total Qty"/>
-                                        <field name="processed" invisible="1" />
+                                        <field name="product" attrs="{'readonly':[('processed','=',True)]}" />
+                                        <field name="qty" attrs="{'readonly':[('processed','=',True)]}" />
+                                        <field name="fill" attrs="{'readonly':[('processed','=',True)]}"
+                                               sum="Total Qty" />
+                                        <field name="processed" />
                                         <field name="packing_state" invisible="1" />
                                     </tree>
                                     <form string="Pack">
@@ -36,7 +41,7 @@
                                 <button
                                     name="create_mo_from_packaging_operation"
                                     string="Create Pack Manufacturing Orders"
-                                    type="object" colspan="2" states="done"/>
+                                    type="object" colspan="2" />
                             </group>
                             <group string='Expected Production'
                                 colspan="4" col="4">

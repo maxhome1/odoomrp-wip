@@ -24,12 +24,9 @@
               "AvanzOSC,"
               "Serv. Tecnol. Avanzados - Pedro M. Baeza",
     "category": "MRP",
-    "description": """
-        This module avoids the automatic confirmation of manufacturing order
-        when procurement orders are executed.
-    """,
     'data': ["data/mrp_production_workflow.xml"],
     'demo': [],
     'installable': True,
     'auto_install': False,
+    'uninstall_hook': 'uninstall_hook',
 }

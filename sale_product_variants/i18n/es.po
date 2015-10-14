@@ -1,138 +1,110 @@
 # Translation of Odoo Server.
 # This file contains the translation of the following modules:
-#	* product_variants_sale
-#
+# * sale_product_variants
+# 
+# Translators:
 msgid ""
 msgstr ""
-"Project-Id-Version: Odoo Server 8.0rc1\n"
+"Project-Id-Version: odoomrp-wip (8.0)\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2014-09-17 09:26+0000\n"
-"PO-Revision-Date: 2014-09-17 11:29+0100\n"
-"Last-Translator: Oihane <oihanecruce@gmail.com>\n"
-"Language-Team: \n"
+"POT-Creation-Date: 2015-10-07 10:45+0000\n"
+"PO-Revision-Date: 2015-10-09 10:50+0000\n"
+"Last-Translator: Pedro M. Baeza <pedro.baeza@gmail.com>\n"
+"Language-Team: Spanish (http://www.transifex.com/oca/odoomrp-wip-8-0/language/es/)\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
-"Content-Transfer-Encoding: 8bit\n"
-"Plural-Forms: \n"
+"Content-Transfer-Encoding: \n"
+"Language: es\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
 
-#. module: product_variants_sale
+#. module: sale_product_variants
+#: view:sale.order:sale_product_variants.sale_order_extended_form_view
+msgid "(update)"
+msgstr "(actualizar)"
+
+#. module: sale_product_variants
 #: field:sale.order.line.attribute,attribute:0
 msgid "Attribute"
 msgstr "Atributo"
 
-#. module: product_variants_sale
-#: help:product.category,sale_no_variants:0
-#: help:product.template,sale_no_variants:0
-msgid "Create product variants when a sale order is confirmed."
-msgstr "Crear variante de producto al confirmar el pedido de venta."
-
-#. module: product_variants_sale
+#. module: sale_product_variants
 #: field:sale.order.line.attribute,create_uid:0
 msgid "Created by"
 msgstr "Creado por"
 
-#. module: product_variants_sale
+#. module: sale_product_variants
 #: field:sale.order.line.attribute,create_date:0
 msgid "Created on"
-msgstr "Creado el"
+msgstr "Creado en"
 
-#. module: product_variants_sale
-#: view:sale.order:product_variants_sale.sale_order_extended_form_view
+#. module: sale_product_variants
+#: view:sale.order:sale_product_variants.sale_order_extended_form_view
 msgid "Duplicate"
 msgstr "Duplicar"
 
-#. module: product_variants_sale
-#: view:sale.order:product_variants_sale.sale_order_extended_form_view
+#. module: sale_product_variants
+#: view:sale.order:sale_product_variants.sale_order_extended_form_view
 msgid "Duplicate line"
 msgstr "Duplicar línea"
 
-#. module: product_variants_sale
+#. module: sale_product_variants
 #: field:sale.order.line.attribute,id:0
 msgid "ID"
 msgstr "ID"
 
-#. module: product_variants_sale
+#. module: sale_product_variants
 #: field:sale.order.line.attribute,write_uid:0
 msgid "Last Updated by"
-msgstr "Actualizado por"
+msgstr "Última actualización por"
 
-#. module: product_variants_sale
+#. module: sale_product_variants
 #: field:sale.order.line.attribute,write_date:0
 msgid "Last Updated on"
-msgstr "Actualizado el"
+msgstr "Última actualización en"
 
-#. module: product_variants_sale
+#. module: sale_product_variants
 #: field:sale.order.line.attribute,sale_line:0
 msgid "Order line"
 msgstr "Línea de pedido"
 
-#. module: product_variants_sale
-#: view:sale.order.line:product_variants_sale.sale_order_line_extended_search_view
-#: selection:sale.order.line,type:0
+#. module: sale_product_variants
+#: view:sale.order.line:sale_product_variants.sale_order_line_extended_search_view
 msgid "Product"
 msgstr "Producto"
 
-#. module: product_variants_sale
-#: model:ir.model,name:product_variants_sale.model_product_category
-msgid "Product Category"
-msgstr "Categoría de producto"
-
-#. module: product_variants_sale
-#: model:ir.model,name:product_variants_sale.model_product_template
+#. module: sale_product_variants
 #: field:sale.order.line,product_template:0
 msgid "Product Template"
 msgstr "Plantilla de producto"
 
-#. module: product_variants_sale
+#. module: sale_product_variants
 #: field:sale.order.line,product_attributes:0
 msgid "Product attributes"
-msgstr "Atributos del producto"
+msgstr "Atributos de producto"
 
-#. module: product_variants_sale
-#: code:addons/product_variants_sale/models/sale_order.py:62
-#, python-format
-msgid "Sale order"
-msgstr "Pedido de venta"
-
-#. module: product_variants_sale
-#: model:ir.model,name:product_variants_sale.model_sale_order
-msgid "Sales Order"
-msgstr "Pedido de venta"
-
-#. module: product_variants_sale
-#: model:ir.model,name:product_variants_sale.model_sale_order_line
+#. module: sale_product_variants
+#: model:ir.model,name:sale_product_variants.model_sale_order_line
 msgid "Sales Order Line"
 msgstr "Línea pedido de venta"
 
-#. module: product_variants_sale
-#: view:sale.order.line:product_variants_sale.sale_order_line_extended_search_view
+#. module: sale_product_variants
+#: view:sale.order.line:sale_product_variants.sale_order_line_extended_search_view
 msgid "Template"
 msgstr "Plantilla"
 
-#. module: product_variants_sale
-#: field:sale.order.line,type:0
-msgid "Type"
-msgstr "Tipo"
+#. module: sale_product_variants
+#: model:res.groups,name:sale_product_variants.group_product_variant_extended_description
+#: field:sale.config.settings,group_product_variant_extended_description:0
+msgid "Use extended description when having product attributes"
+msgstr "Usar descripción extendida cuando se tienen atributos de producto"
 
-#. module: product_variants_sale
+#. module: sale_product_variants
 #: field:sale.order.line.attribute,value:0
 msgid "Value"
 msgstr "Valor"
 
-#. module: product_variants_sale
-#: selection:sale.order.line,type:0
-msgid "Variant"
-msgstr "Variante"
-
-#. module: product_variants_sale
-#: field:product.category,sale_no_variants:0
-#: field:product.template,sale_no_variants:0
-msgid "Variants on sale"
-msgstr "Variantes en venta"
-
-#. module: product_variants_sale
-#: view:sale.order:product_variants_sale.sale_order_extended_form_view
-#: view:sale.order.line:product_variants_sale.sale_order_line_extended_form_view
-msgid "{'invisible':[('type','!=','product')]}"
-msgstr "{'invisible':[('type','!=','product')]}"
-
+#. module: sale_product_variants
+#: code:addons/sale_product_variants/models/sale_order.py:180
+#, python-format
+msgid "You can not confirm before configuring all attribute values."
+msgstr "No puede confirmar antes de configurar todos los valores de atributo."

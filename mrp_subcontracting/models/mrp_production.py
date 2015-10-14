@@ -1,22 +1,8 @@
-# -*- encoding: utf-8 -*-
+# -*- coding: utf-8 -*-
 ##############################################################################
-#
-#    This program is free software: you can redistribute it and/or modify
-#    it under the terms of the GNU Affero General Public License as
-#    published by the Free Software Foundation, either version 3 of the
-#    License, or (at your option) any later version.
-#
-#    This program is distributed in the hope that it will be useful,
-#    but WITHOUT ANY WARRANTY; without even the implied warranty of
-#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-#    GNU Affero General Public License for more details.
-#
-#    You should have received a copy of the GNU Affero General Public License
-#    along with this program.  If not, see http://www.gnu.org/licenses/.
-#
+# For copyright and license notices, see __openerp__.py file in root directory
 ##############################################################################
-
-from openerp import models, fields, api, exceptions, _
+from openerp import models, fields, api
 
 
 class MrpProduction(models.Model):
@@ -24,28 +10,24 @@ class MrpProduction(models.Model):
 
     @api.one
     def _created_purchases(self):
-        purchase_obj = self.env['purchase.order']
         cond = [('mrp_production', '=', self.id)]
-        purchases = purchase_obj.search(cond)
-        self.created_purchases = len(purchases)
+        self.created_purchases = len(self.env['purchase.order'].search(cond))
 
     @api.one
     def _created_outpickings(self):
         picking_obj = self.env['stock.picking']
         cond = [('mrp_production', '=', self.id)]
-        pickings = picking_obj.search(cond)
-        cont = len([picking for picking in pickings if
-                    picking.picking_type_id.code == 'outgoing'])
-        self.created_outpickings = cont
+        self.created_outpickings = len(
+            picking_obj.search(cond).filtered(
+                lambda x: x.picking_type_id.code == 'outgoing'))
 
     @api.one
     def _created_inpickings(self):
         picking_obj = self.env['stock.picking']
         cond = [('mrp_production', '=', self.id)]
-        pickings = picking_obj.search(cond)
-        cont = len([picking for picking in pickings if
-                    picking.picking_type_id.code == 'incoming'])
-        self.created_inpickings = cont
+        self.created_outpickings = len(
+            picking_obj.search(cond).filtered(
+                lambda x: x.picking_type_id.code == 'incoming'))
 
     created_purchases = fields.Integer(
         string='Created Purchases', readonly=True,
@@ -59,44 +41,37 @@ class MrpProduction(models.Model):
 
     @api.one
     def action_confirm(self):
-        user_obj = self.env['res.users']
-        warehouse_obj = self.env['stock.warehouse']
         res = super(MrpProduction, self).action_confirm()
-        user = user_obj.browse(self._uid)
-        cond = [('company_id', '=', user.company_id.id)]
-        warehouse = False
         for move in self.move_lines:
-            if move.work_order.routing_wc_line.external:
+            if (move.work_order.routing_wc_line.external and
+                    move.work_order.routing_wc_line.picking_type_id):
                 ptype = move.work_order.routing_wc_line.picking_type_id
                 move.location_id = ptype.default_location_src_id.id
                 move.location_dest_id = ptype.default_location_dest_id.id
         for wc_line in self.workcenter_lines:
             if wc_line.external:
-                if not warehouse:
-                    cond = [('lot_stock_id', '=', self.location_dest_id.id)]
-                    warehouse = warehouse_obj.search(cond, limit=1)
-                    if not warehouse:
-                        raise exceptions.Warning(
-                            _('Production Confirmation Error'),
-                            _('Company warehouse not found'))
                 wc_line.procurement_order = (
-                    self._create_external_procurement(wc_line, warehouse))
+                    self._create_external_procurement(wc_line))
         return res
 
-    def _create_external_procurement(self, wc_line, warehouse):
-        procurement_obj = self.env['procurement.order']
-        vals = {'name': wc_line.name,
-                'origin': wc_line.name,
-                'product_id': wc_line.routing_wc_line.semifinished_id.id,
-                'product_qty': self.product_qty,
-                'product_uom':
-                wc_line.routing_wc_line.semifinished_id.uom_id.id,
-                'location_id': self.location_dest_id.id,
-                'production_id': self.id,
-                'warehouse_id': warehouse.id,
-                'mrp_operation': wc_line.id,
-                }
-        procurement = procurement_obj.create(vals)
+    def _prepare_extenal_procurement(self, wc_line):
+        wc = wc_line.routing_wc_line
+        name = "%s: %s" % (wc_line.production_id.name, wc_line.name)
+        return {
+            'name': name,
+            'origin': name,
+            'product_id': wc.semifinished_id.id,
+            'product_qty': self.product_qty,
+            'product_uom': wc.semifinished_id.uom_id.id,
+            'location_id': self.location_dest_id.id,
+            'production_id': self.id,
+            'warehouse_id': wc.picking_type_id.warehouse_id.id,
+            'mrp_operation': wc_line.id,
+        }
+
+    def _create_external_procurement(self, wc_line):
+        procurement = self.env['procurement.order'].create(
+            self._prepare_extenal_procurement(wc_line))
         procurement.run()
         return procurement.id
 

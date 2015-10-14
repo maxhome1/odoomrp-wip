@@ -1,19 +1,6 @@
-# -*- encoding: utf-8 -*-
+# -*- coding: utf-8 -*-
 ##############################################################################
-#
-#    This program is free software: you can redistribute it and/or modify
-#    it under the terms of the GNU Affero General Public License as
-#    published by the Free Software Foundation, either version 3 of the
-#    License, or (at your option) any later version.
-#
-#    This program is distributed in the hope that it will be useful,
-#    but WITHOUT ANY WARRANTY; without even the implied warranty of
-#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-#    GNU Affero General Public License for more details.
-#
-#    You should have received a copy of the GNU Affero General Public License
-#    along with this program.  If not, see http://www.gnu.org/licenses/.
-#
+# For copyright and license notices, see __openerp__.py file in root directory
 ##############################################################################
 from openerp import models, fields, api
 
@@ -27,8 +14,9 @@ class PurchaseOrder(models.Model):
         'mrp.production', string='MRP Production', store=True,
         related="mrp_operation.production_id")
 
-    @api.one
+    @api.multi
     def wkf_confirm_order(self):
+        self.ensure_one()
         picking_obj = self.env['stock.picking']
         result = super(PurchaseOrder, self).wkf_confirm_order()
         picking = False
@@ -40,14 +28,12 @@ class PurchaseOrder(models.Model):
                         vals = {'origin': self.mrp_operation.name,
                                 'picking_type_id': wc_line.picking_type_id.id,
                                 'invoice_state': 'none',
+                                'partner_id': self.partner_id.id,
                                 'mrp_production':
-                                self.mrp_operation.production_id.id
-                                }
+                                self.mrp_operation.production_id.id}
                         picking = picking_obj.create(vals)
-                        vals = {'out_picking': picking.id}
-                        self.mrp_operation.write(vals)
-                    vals = {'picking_id': picking.id}
-                    move.write(vals)
+                        self.mrp_operation.out_picking = picking.id
+                    move.picking_id = picking.id
         return result
 
     @api.one

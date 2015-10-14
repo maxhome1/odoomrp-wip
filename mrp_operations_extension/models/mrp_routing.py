@@ -1,21 +1,7 @@
-# -*- encoding: utf-8 -*-
+# -*- coding: utf-8 -*-
 ##############################################################################
-#
-#    This program is free software: you can redistribute it and/or modify
-#    it under the terms of the GNU Affero General Public License as published
-#    by the Free Software Foundation, either version 3 of the License, or
-#    (at your option) any later version.
-#
-#    This program is distributed in the hope that it will be useful,
-#    but WITHOUT ANY WARRANTY; without even the implied warranty of
-#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-#    GNU General Public License for more details.
-#
-#    You should have received a copy of the GNU Affero General Public License
-#    along with this program.  If not, see http://www.gnu.org/licenses/.
-#
+# For copyright and license notices, see __openerp__.py file in root directory
 ##############################################################################
-
 from openerp import models, fields, api, _
 from openerp.addons import decimal_precision as dp
 
@@ -56,6 +42,8 @@ class MrpRoutingWorkcenter(models.Model):
     previous_operations_finished = fields.Boolean(
         string='Previous operations finished',
         default="get_routing_previous_operations")
+    picking_type_id = fields.Many2one('stock.picking.type', 'Picking Type',
+                                      domain=[('code', '=', 'outgoing')])
 
     @api.constrains('op_wc_lines')
     def _check_default_op_wc_lines(self):
@@ -118,7 +106,7 @@ class MrpOperationWorkcenter(models.Model):
                              help="Time in hours for the cleaning.")
     op_number = fields.Integer('# operators', default='0')
     op_avg_cost = fields.Float(
-        string='Operator avg. cost',
+        string='Operator avg. hour cost',
         digits=dp.get_precision('Product Price'))
     default = fields.Boolean('Default')
 

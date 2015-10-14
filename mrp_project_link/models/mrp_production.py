@@ -39,9 +39,15 @@ class MrpProduction(models.Model):
                            ('wk_order', '=', False)]
             tasks = task_obj.search(task_domain)
             if not tasks:
-                task_name = ("%s:: [%s]%s") % (record.name,
-                                               record.product_id.default_code,
-                                               record.product_id.name)
+                if record.product_id.default_code:
+                    task_name = ("%s::[%s] %s") % (
+                        record.name,
+                        record.product_id.default_code,
+                        record.product_id.name)
+                else:
+                    task_name = ("%s::%s") % (
+                        record.name,
+                        record.product_id.name)
                 task_descr = _("""
                 Manufacturing Order: %s
                 Product to Produce: [%s]%s
@@ -111,9 +117,15 @@ class MrpProductionWorkcenterLine(models.Model):
                 'project_id': record.production_id.project_id.id,
                 'parent_ids': [(6, 0, production_tasks.ids)]
             }
-            if record.routing_wc_line.operation:
-                count = record.routing_wc_line.operation.op_number
+            if record.routing_wc_line:
+                count = (
+                    record.routing_wc_line.op_wc_lines.filtered(
+                        lambda r: r.workcenter == record.workcenter_id
+                    ).op_number or record.workcenter_id.op_number)
+                op_list = record.workcenter_id.operators
                 for i in range(count):
+                    if len(op_list) > i:
+                        task_values['user_id'] = op_list[i].id
                     task_name = (_("%s:: WO%s-%s:: %s") %
                                  (record.production_id.name,
                                   str(record.sequence).zfill(3),

@@ -1,49 +1,35 @@
 # -*- encoding: utf-8 -*-
 ##############################################################################
-#
-#    This program is free software: you can redistribute it and/or modify
-#    it under the terms of the GNU Affero General Public License as published
-#    by the Free Software Foundation, either version 3 of the License, or
-#    (at your option) any later version.
-#
-#    This program is distributed in the hope that it will be useful,
-#    but WITHOUT ANY WARRANTY; without even the implied warranty of
-#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-#    GNU General Public License for more details.
-#
-#    You should have received a copy of the GNU Affero General Public License
-#    along with this program.  If not, see http://www.gnu.org/licenses/.
-#
+# For copyright and license notices, see __openerp__.py file in root directory
 ##############################################################################
 
-from openerp.osv import orm, fields
+from openerp import models, fields, api
 
 
-class SaleOrder(orm.Model):
+class SaleOrder(models.Model):
     _inherit = 'sale.order'
 
-    _columns = {
-        'comment': fields.text('Internal comments'),
-        'propagated_comment': fields.text('Propagated internal comments'),
-    }
+    comment = fields.Text(string='Internal comments')
+    propagated_comment = fields.Text(string='Propagated internal comments')
 
-    def _prepare_invoice(self, cr, uid, order, lines, context=None):
-        res = super(SaleOrder, self)._prepare_invoice(cr, uid, order, lines,
-                                                      context=context)
-        if 'sale_comment' not in res:
-            res['sale_comment'] = order.propagated_comment
-        else:
-            res['sale_comment'] += ' ' + order.propagated_comment
+    @api.model
+    def _prepare_invoice(self, order, lines):
+        res = super(SaleOrder, self)._prepare_invoice(order, lines)
+        sale_comment = res.get('sale_comment', '')
+        partner_id = res.get('partner_id', order.partner_invoice_id.id)
+        sale_comment += '\n%s' % (order.propagated_comment or '')
+        if partner_id:
+            partner = self.env['res.partner'].browse(partner_id)
+            sale_comment += '\n%s' % (partner._get_invoice_comments() or '')
+        res['sale_comment'] = sale_comment
         return res
 
-    def onchange_partner_id(self, cr, uid, ids, partner_id, context=None):
-        val = super(SaleOrder, self).onchange_partner_id(cr, uid, ids,
-                                                         partner_id,
-                                                         context=context)
+    @api.multi
+    def onchange_partner_id(self, partner_id):
+        val = super(SaleOrder, self).onchange_partner_id(partner_id)
         if partner_id:
-            partner_obj = self.pool['res.partner']
-            partner = partner_obj.browse(cr, uid, partner_id, context=context)
-            val['value'].update(
-                {'comment': partner.sale_comment,
-                 'propagated_comment': partner.sale_propagated_comment})
+            partner = self.env['res.partner'].browse(partner_id)
+            comment, pcomment = partner._get_sale_comments()
+            val['value'].update({'comment': comment,
+                                 'propagated_comment': pcomment})
         return val

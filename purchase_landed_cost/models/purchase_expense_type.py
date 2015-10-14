@@ -25,7 +25,7 @@ class PurchaseExpenseType(models.Model):
     name = fields.Char(string='Name', required=True, translate=True,
                        select=True)
     company_id = fields.Many2one(
-        comodel_name='res.company', string='Company', required=True,
+        comodel_name='res.company', string='Company',
         default=(lambda self: self.env['res.company']._company_default_get(
             'purchase.cost.type')))
     default_expense = fields.Boolean(
@@ -42,3 +42,7 @@ class PurchaseExpenseType(models.Model):
          ('equal', 'Equally to all lines')], string='Calculation method',
         default='amount')
     note = fields.Text(string='Cost documentation')
+    default_amount = fields.Float(
+        string="Default amount",
+        help="If set, this amount is put in the expense line when you "
+             "select this expense type")

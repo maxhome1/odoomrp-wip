@@ -1,22 +1,10 @@
 # -*- encoding: utf-8 -*-
 ##############################################################################
-#
-#    This program is free software: you can redistribute it and/or modify
-#    it under the terms of the GNU Affero General Public License as published
-#    by the Free Software Foundation, either version 3 of the License, or
-#    (at your option) any later version.
-#
-#    This program is distributed in the hope that it will be useful,
-#    but WITHOUT ANY WARRANTY; without even the implied warranty of
-#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-#    GNU Affero General Public License for more details.
-#
-#    You should have received a copy of the GNU Affero General Public License
-#    along with this program.  If not, see http://www.gnu.org/licenses/.
-#
+# For copyright and license notices, see __openerp__.py file in root directory
 ##############################################################################
 
 from openerp import api, fields, models, exceptions, _
+from openerp.addons import decimal_precision as dp
 
 
 class MrpProduction(models.Model):
@@ -26,6 +14,45 @@ class MrpProduction(models.Model):
     expected_production = fields.One2many('mrp.production', 'production',
                                           string='Expected Production')
     production = fields.Many2one('mrp.production', string='Production')
+    final_product_qty = fields.Float(
+        string='Produced product qty', compute='_final_product_qty',
+        digits=dp.get_precision('Product Unit of Measure'),
+        help='This amount is the real amount produced in the MO.')
+    left_product_qty = fields.Float(
+        string='Qty left for packaging', compute='_left_product_qty',
+        digits=dp.get_precision('Product Unit of Measure'),
+        help='This amount is indicative, it is calculated with packaging'
+        ' orders that are not in canceled state.')
+
+    @api.one
+    @api.depends('move_created_ids2')
+    def _final_product_qty(self):
+        final_qty = 0.0
+        for move in self.move_created_ids2:
+            if move.state == 'done':
+                final_qty += move.product_uom_qty
+        self.final_product_qty = final_qty
+
+    @api.one
+    @api.depends('final_product_qty', 'expected_production')
+    def _left_product_qty(self):
+        left_qty = self.final_product_qty
+        for production in self.expected_production:
+            if production.state != 'cancel':
+                if production.move_lines2:
+                    for move in production.move_lines2:
+                        if production.production.product_id == move.product_id:
+                            left_qty -= move.product_uom_qty
+                elif production.move_lines:
+                    for move in production.move_lines:
+                        if production.production.product_id == move.product_id:
+                            left_qty -= move.product_uom_qty
+                else:
+                    for product in production.product_lines:
+                        if (production.production.product_id ==
+                                product.product_id):
+                            left_qty -= product.product_qty
+        self.left_product_qty = left_qty
 
     @api.one
     def get_dump_packages(self):
@@ -45,7 +72,7 @@ class MrpProduction(models.Model):
         self.write({'pack': pack_lines})
 
     @api.one
-    def recalcule_bom_qtys(self, bom_qty, product):
+    def recalculate_bom_qtys(self, bom_qty, product):
         products = dict((x.product_id.id, x.product_qty)
                         for x in self.bom_id.bom_line_ids)
         product_ids = products.keys()
@@ -59,14 +86,22 @@ class MrpProduction(models.Model):
                            products[line.product_id.id] * bom_qty})]})
 
     @api.one
+    def recalculate_product_qty(self, qty, product):
+        line = self.product_lines.filtered(
+            lambda x: x.product_id == product)
+        line.write({'product_qty': qty})
+
+    @api.one
+    def assign_parent_lot(self, production):
+        line = self.product_lines.filtered(
+            lambda x: x.product_id == production.product_id)
+        line.write({'lot': (
+                    production.move_created_ids2 and
+                    production.move_created_ids2[0].restrict_lot_id.id or
+                    False)})
+
+    @api.one
     def create_mo_from_packaging_operation(self):
-        if self.move_created_ids:
-            raise exceptions.Warning(
-                _("You can't pack a product before it is manufactured"))
-        total = sum([x.fill for x in self.pack])
-        if total > self.product_qty:
-            raise exceptions.Warning(
-                _("You can not pack more quantity than you have manufactured"))
         for op in self.pack:
             linked_raw_products = []
             add_product = []
@@ -89,7 +124,9 @@ class MrpProduction(models.Model):
             new_op = self.create(data['value'])
             new_op.action_compute()
             if equal_uom:
-                new_op.recalcule_bom_qtys(op.qty, self.product_id)
+                new_op.recalculate_bom_qtys(op.qty, self.product_id)
+            new_op.recalculate_product_qty(op.fill, self.product_id)
+            new_op.assign_parent_lot(self)
             workorder =\
                 new_op.workcenter_lines and new_op.workcenter_lines[0].id
             for attr_value in op.product.attribute_value_ids:
@@ -103,9 +140,7 @@ class MrpProduction(models.Model):
                         raw_product.uos_id.id,
                         op.qty, workorder)
                     linked_raw_products.append(value)
-            prod_line_ids = []
             for line in new_op.product_lines:
-                prod_line_ids.append(line.product_id.id)
                 if self.product_id.product_tmpl_id == line.product_template:
                     if new_op.product_id.track_all or\
                             new_op.product_id.track_production:
@@ -116,17 +151,24 @@ class MrpProduction(models.Model):
                     new_op.manual_production_lot = line.lot.name
                     continue
             for link_product in linked_raw_products:
-                if link_product['product_id'] in prod_line_ids:
-                    new_op.write(
-                        {'product_lines': [(1, link_product['product_id'],
-                                            link_product)]})
+                recs = new_op.product_lines.filtered(
+                    lambda x: x.product_id.id == link_product['product_id'])
+                if recs:
+                    recs.write(link_product)
                 else:
                     add_product.append(link_product)
-            new_op.write({'product_lines': map(lambda x: (0, 0, x),
-                                               add_product),
-                          'production': self.id,
-                          'origin': self.name})
+            new_op.write({
+                'product_lines': map(lambda x: (0, 0, x), add_product),
+                'production': self.id,
+                'origin': self.name})
             op.packaging_production = new_op
+
+    @api.multi
+    def action_compute(self, properties=None):
+        if not self.production:
+            return super(MrpProduction, self).action_compute(properties)
+        else:
+            raise exceptions.Warning(_("You can not compute again the list."))
 
 
 class PackagingOperation(models.Model):
@@ -134,7 +176,7 @@ class PackagingOperation(models.Model):
     _rec_name = 'product'
 
     @api.one
-    @api.depends('product', 'qty')
+    @api.onchange('product', 'qty')
     def _calculate_weight(self):
         raw_qty = 1
         for value in self.product.attribute_value_ids:
@@ -142,6 +184,20 @@ class PackagingOperation(models.Model):
                 raw_qty = value.numeric_value
                 break
         self.fill = raw_qty * self.qty
+
+    @api.multi
+    @api.onchange('fill')
+    def _exceded_fill_quantity_warning(self):
+        self.ensure_one()
+        if self.fill > self.operation.left_product_qty:
+            return {'warning':
+                    {'title': _('Warning'),
+                     'message': _("You won't be able to pack %f, there is only"
+                                  " %f left" %
+                                  (self.fill,
+                                   self.operation.left_product_qty))}}
+        else:
+            return {}
 
     @api.one
     @api.depends('packaging_production')
@@ -154,10 +210,11 @@ class PackagingOperation(models.Model):
         help="Product that is going to be manufactured")
     operation = fields.Many2one('mrp.production')
     qty = fields.Integer(
-        string="Qty", help="Product Quantity. It will be the new manufacturing"
-        " order quantity if dump uom is equal to product uom")
+        string="Qty", digits=dp.get_precision('Product Unit of Measure'),
+        help="Product Quantity. It will be the new manufacturing order"
+        " quantity if dump uom is equal to product uom")
     fill = fields.Float(
-        string="Fill", compute=_calculate_weight,
+        string="Fill", digits=dp.get_precision('Product Unit of Measure'),
         help="Product linked Raw Material value * Product Quantity. It will be"
         " the new manufacturing order quantity if dump UoM is not equal to"
         " product UoM")

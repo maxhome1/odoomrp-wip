@@ -10,15 +10,12 @@ class StockTransferDetails(models.TransientModel):
     _inherit = 'stock.transfer_details'
 
     @api.one
-    def do_detailed_transfer(self):
-        result = super(StockTransferDetails, self).do_detailed_transfer()
-        self.picking_id._catch_operations()
-        return result
-
-    @api.one
     def do_save_for_later(self):
         operation_obj = self.env['stock.pack.operation'].with_context(
             no_recompute=True)
+        if not self.item_ids and not self.packop_ids:
+            self.picking_id.pack_operation_ids.unlink()
+            return True
         # Create new and update existing pack operations
         for lstits in [self.item_ids, self.packop_ids]:
             for prod in lstits:
@@ -40,5 +37,4 @@ class StockTransferDetails(models.TransientModel):
                 else:
                     pack_datas['picking_id'] = self.picking_id.id
                     operation_obj.create(pack_datas)
-        self.picking_id._catch_operations()
         return True

@@ -1,33 +1,42 @@
 # -*- encoding: utf-8 -*-
 ##############################################################################
-#
-#    This program is free software: you can redistribute it and/or modify
-#    it under the terms of the GNU Affero General Public License as published
-#    by the Free Software Foundation, either version 3 of the License, or
-#    (at your option) any later version.
-#
-#    This program is distributed in the hope that it will be useful,
-#    but WITHOUT ANY WARRANTY; without even the implied warranty of
-#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-#    GNU General Public License for more details.
-#
-#    You should have received a copy of the GNU Affero General Public License
-#    along with this program.  If not, see http://www.gnu.org/licenses/.
-#
+# For copyright and license notices, see __openerp__.py file in root directory
 ##############################################################################
 
-from openerp.osv import orm, fields
+from openerp import models, fields
 
 
-class ResPartner(orm.Model):
+class ResPartner(models.Model):
     _inherit = 'res.partner'
 
-    _columns = {
-        'sale_comment': fields.text('Comments for sale orders'),
-        'sale_propagated_comment': fields.text('Propagated comments for sale'
-                                               ' orders'),
-        'picking_comment': fields.text('Comments for pickings'),
-        'picking_propagated_comment': fields.text('Propagated comments for'
-                                                  ' pickings'),
-        'invoice_comment': fields.text('Comments for invoices'),
-    }
+    sale_comment = fields.Text(string='Comments for sale orders')
+    sale_propagated_comment = fields.Text(
+        string='Propagated comments for sale orders')
+    picking_comment = fields.Text(string='Comments for pickings')
+    picking_propagated_comment = fields.Text(
+        string='Propagated comments for pickings')
+    invoice_comment = fields.Text(string='Comments for invoices')
+
+    def _get_sale_comments(self):
+        comment = self.sale_comment or ''
+        pcomment = self.sale_propagated_comment or ''
+        if self.parent_id:
+            comment += '\n%s' % (self.parent_id.sale_comment or '')
+            pcomment += '\n%s' % (self.parent_id.sale_propagated_comment or
+                                  '')
+        return comment, pcomment
+
+    def _get_picking_comments(self):
+        comment = self.picking_comment or ''
+        pcomment = self.picking_propagated_comment or ''
+        if self.parent_id:
+            comment += '\n%s' % (self.parent_id.picking_comment or '')
+            pcomment += '\n%s' % (self.parent_id.picking_propagated_comment or
+                                  '')
+        return comment, pcomment
+
+    def _get_invoice_comments(self):
+        comment = self.invoice_comment or ''
+        if self.parent_id:
+            comment += '\n%s' % (self.parent_id.invoice_comment or '')
+        return comment

@@ -20,8 +20,8 @@
     "name": "MRP Operations Extension",
     "version": "1.0",
     "category": "Manufacturing",
-    "author": "OdooMRP team,"
-              "AvanzOSC,"
+    "author": "OdooMRP team, "
+              "AvanzOSC, "
               "Serv. Tecnol. Avanzados - Pedro M. Baeza",
     "website": "http://www.odoomrp.com",
     "contributors": [
@@ -29,14 +29,18 @@
         "Mikel Arregi <mikelarregi@avanzosc.es>",
         "Oihane Crucelaegui <oihanecrucelaegi@avanzosc.es>",
         "Pedro M. Baeza <pedro.baeza@serviciosbaeza.com>",
-        "Ana Juaristi <ajuaristio@gmail.com>",
+        "Ana Juaristi <anajuaristi@avanzosc.es>",
     ],
     "depends": [
+        "base",
         "mrp_operations",
         "mrp",
         "stock",
+        "hr",
+        "hr_timesheet",
     ],
     "data": [
+        "data/mrp_operations_extension_data.xml",
         "wizard/mrp_workorder_produce_view.xml",
         "views/mrp_workcenter_view.xml",
         "views/mrp_routing_operation_view.xml",
@@ -46,6 +50,14 @@
         "views/res_config_view.xml",
         "security/ir.model.access.csv",
         "security/mrp_operations_extension_security.xml",
+    ],
+    "demo": [
+        "demo/res_partner_demo.xml",
+        "demo/hr_employee_demo.xml",
+        "demo/mrp_workcenter_demo.xml",
+        "demo/mrp_bom_demo.xml",
+        "demo/mrp_routing_demo.xml",
+        "demo/mrp_production_demo.xml",
     ],
     "installable": True
 }

@@ -1,78 +1,53 @@
 # -*- encoding: utf-8 -*-
 ##############################################################################
-#
-#    This program is free software: you can redistribute it and/or modify
-#    it under the terms of the GNU Affero General Public License as published
-#    by the Free Software Foundation, either version 3 of the License, or
-#    (at your option) any later version.
-#
-#    This program is distributed in the hope that it will be useful,
-#    but WITHOUT ANY WARRANTY; without even the implied warranty of
-#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-#    GNU General Public License for more details.
-#
-#    You should have received a copy of the GNU Affero General Public License
-#    along with this program.  If not, see http://www.gnu.org/licenses/.
-#
+# For copyright and license notices, see __openerp__.py file in root directory
 ##############################################################################
 
-from openerp.osv import orm, fields
+from openerp import api, models, fields
 
 
-class StockPicking(orm.Model):
+class StockPicking(models.Model):
     _inherit = 'stock.picking'
 
-    _columns = {
-        'sale_comment': fields.text('Internal comments'),
-        'sale_propagated_comment': fields.text('Propagated internal comments'),
-    }
+    sale_comment = fields.Text(string='Internal comments')
+    sale_propagated_comment = fields.Text(
+        string='Propagated internal comments')
 
-    def onchange_partner_id(self, cr, uid, ids, partner_id, context=None):
-        if not partner_id:
-            return {}
-        partner_obj = self.pool['res.partner']
-        partner = partner_obj.browse(cr, uid, partner_id, context=context)
-        value = {
-            'sale_comment': partner.picking_comment,
-            'sale_propagated_comment': partner.picking_propagated_comment,
-        }
-        return {'value': value}
+    @api.one
+    @api.onchange('partner_id')
+    def onchange_partner_id(self):
+        picking_com, picking_pcom = self.partner_id._get_picking_comments()
+        self.sale_comment = picking_com
+        self.sale_propagated_comment = picking_pcom
 
-    def create(self, cr, uid, values, context=None):
+    @api.model
+    def create(self, values):
         partner_id = values.get('partner_id', False)
         origin = values.get('origin', False)
+        comment = values.get('sale_comment', '') or ''
+        pcomment = values.get('sale_propagated_comment', '') or ''
         if partner_id:
-            partner_obj = self.pool['res.partner']
-            if 'sale_comment' not in values:
-                values['sale_comment'] = ''
-            if 'sale_propagated_comment' not in values:
-                values['sale_propagated_comment'] = ''
             if origin:
-                sale_obj = self.pool['sale.order']
-                sale_ids = sale_obj.search(cr, uid, [('name', '=', origin)],
-                                           context=context)
-                if sale_ids:
-                    sale = sale_obj.browse(cr, uid, sale_ids[0],
-                                           context=context)
-                    if sale.propagated_comment:
-                        values['sale_propagated_comment'] += (
-                            sale.propagated_comment)
-            partner = partner_obj.browse(cr, uid, partner_id, context=context)
-            if (partner.picking_comment and
-                    values['sale_comment'] != partner.picking_comment):
-                values['sale_comment'] = (partner.picking_comment + '\n' +
-                                          values['sale_comment'])
-            if (partner.picking_propagated_comment and
-                    (values['sale_propagated_comment'] !=
-                     partner.picking_propagated_comment)):
-                values['sale_propagated_comment'] = (
-                    partner.picking_propagated_comment + '\n' +
-                    values['sale_propagated_comment'])
-        return super(StockPicking, self).create(cr, uid, values,
-                                                context=context)
+                sale_obj = self.env['sale.order']
+                sale = sale_obj.search([('name', '=', origin)], limit=1)
+                pcomment += '\n%s' % (sale.propagated_comment or '')
+            partner = self.env['res.partner'].browse(partner_id)
+            picking_com, picking_pcom = partner._get_picking_comments()
+            comment += '\n%s' % (picking_com or '')
+            pcomment += '\n%s' % (picking_pcom or '')
+            values.update({'sale_comment': comment,
+                           'sale_propagated_comment': pcomment})
+        return super(StockPicking, self).create(values)
 
-    def _create_invoice_from_picking(self, cr, uid, picking, values,
-                                     context=None):
-        values['sale_comment'] = picking.sale_propagated_comment
+    @api.model
+    def _create_invoice_from_picking(self, picking, values):
+        sale_comment = values.get('sale_comment', '')
+        sale_comment += (
+            '\n%s' % (picking.sale_propagated_comment or ''))
+        partner_id = values.get('partner_id')
+        if partner_id:
+            partner = self.env['res.partner'].browse(partner_id)
+            sale_comment += '\n%s' % (partner._get_invoice_comments() or '')
+        values['sale_comment'] = sale_comment
         return super(StockPicking, self)._create_invoice_from_picking(
-            cr, uid, picking, values, context=context)
+            picking, values)

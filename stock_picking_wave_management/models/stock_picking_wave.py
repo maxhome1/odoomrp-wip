@@ -28,6 +28,16 @@ class StockPickingWave(models.Model):
         compute="_count_assigned_pickings", string="Assigned pickings")
     partner = fields.Many2one('res.partner', 'Partner')
 
+    @api.multi
+    def confirm_picking(self):
+        picking_obj = self.env['stock.picking']
+        for wave in self:
+            pickings = picking_obj.search([('wave_id', '=', wave.id),
+                                           ('state', '=', 'draft')])
+            pickings.action_assign()
+            wave.state = 'in_progress'
+        return True
+
     @api.one
     def button_check_availability(self):
         pickings = self.picking_ids.filtered(lambda x: x.state == 'confirmed')
@@ -44,15 +54,21 @@ class StockPickingWave(models.Model):
             cr, uid, pickings.ids, context=c)
 
     @api.multi
-    @api.onchange('partner')
-    def onchange_partner(self):
+    def _get_pickings_domain(self):
         self.ensure_one()
         cond = [('wave_id', '=', False),
-                ('state', 'not in', ('done', 'cancel'))]
+                ('state', 'not in', ['done', 'cancel'])]
         if self.partner.child_ids:
             cond.extend(['|', ('partner_id', '=', self.partner.id),
-                         ('partner_id', 'child_of',
+                         ('partner_id', 'in',
                           self.partner.child_ids.ids)])
         elif self.partner:
             cond.extend([('partner_id', '=', self.partner.id)])
+        return cond
+
+    @api.multi
+    @api.onchange('partner')
+    def onchange_partner(self):
+        self.ensure_one()
+        cond = self._get_pickings_domain()
         return {'domain': {'picking_ids': cond}}

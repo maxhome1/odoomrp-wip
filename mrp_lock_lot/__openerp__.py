@@ -22,7 +22,8 @@
 
 {
     "name": "MRP Lock Lot",
-    "version": "1.0",
+    "Summary": "Restrict blocked lots in Manufacturing Orders",
+    "version": "2.0",
     "author": "OdooMRP team,"
               "Avanzosc,"
               "Serv. Tecnol. Avanzados - Pedro M. Baeza",
@@ -33,19 +34,17 @@
         "Alfredo de la Fuente <alfredodelafuente@avanzosc.es>",
         "Oihane Crucelaegui <oihanecrucelaegi@avanzosc.es>",
         ],
+    "description": """
+    Bridge module for compatibility with first versions that depends on the new
+    one.
+    """,
     "category": "Manufacturing",
-    "depends": ["stock",
-                "mrp",
-                "product",
+    "depends": ["mrp",
+                "stock_lock_lot",
                 ],
     "data": [
-        "data/mrp_lock_lot_data.xml",
-        "wizard/stock_transfer_details_view.xml",
         "wizard/mrp_product_produce_view.xml",
-        "wizard/wiz_lock_lot_view.xml",
-        "views/product_category_view.xml",
-        "views/stock_production_lot_view.xml",
-        "views/stock_quant_view.xml",
     ],
+    "auto_install": True,
     "installable": True,
 }
